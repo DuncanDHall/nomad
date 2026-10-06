@@ -152,7 +152,15 @@ function main() {
 
 
   if [ "$ARG1" = "stop" ]; then
-    nomad stop $NOMAD_VAR_SLUG
+    if [ "${NOMAD_VAR_NAMESPACE:-}" != "" ]; then
+      export NOMAD_NAMESPACE=$NOMAD_VAR_NAMESPACE
+    fi
+    echo stopping $NOMAD_VAR_SLUG on nomad cluster $NOMAD_ADDR
+    set -o pipefail
+    if ! nomad stop $NOMAD_VAR_SLUG 2>&1 |tee /tmp/stop.log; then
+      # already stopped & garbage collected, or never deployed -- nothing to do
+      grep -qF 'No job(s) with prefix or ID' /tmp/stop.log  ||  exit 1
+    fi
     exit 0
   fi
 
